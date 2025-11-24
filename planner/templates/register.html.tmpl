@@ -1,12 +1,18 @@
-<form method="post">
-  {% csrf_token %}
-  <fieldset>
-    <label for="username">Username</label>
-    <input type="text" name="username" required>
-    <label for="email">Email</label>
-    <input type="email" name="email" required>
-    <label for="password">Password</label>
-    <input type="password" name="password" required>
-  </fieldset>
-  <input type="submit" value="Submit">
-</form>
+{% extends "base.html.tmpl" %}
+
+{% block title %}Register{% endblock %}
+
+{% block content %}
+  <form method="post">
+    {% csrf_token %}
+    <fieldset>
+      <label for="username">Username</label>
+      <input type="text" name="username" required>
+      <label for="email">Email</label>
+      <input type="email" name="email" required>
+      <label for="password">Password</label>
+      <input type="password" name="password" required>
+    </fieldset>
+    <input type="submit" value="Submit">
+  </form>
+{% endblock %}

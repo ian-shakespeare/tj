@@ -1,3 +1,5 @@
+import os
+
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -5,12 +7,15 @@ from django.http import HttpResponse, HttpResponseNotAllowed, HttpResponseNotFou
 from django.shortcuts import redirect, render
 
 
+DEV_MODE = os.getenv("DEV_MODE") == "true"
+
+
 def index(request):
     if request.user.is_authenticated:
         return redirect(to="/plans")
 
     if request.method == "GET":
-        return render(request, template_name="index.html.tmpl")
+        return render(request, template_name="index.html.tmpl", context={"dev_mode": DEV_MODE})
     elif request.method == "POST":
         username = request.POST["username"]
         password = request.POST["password"]
@@ -30,7 +35,7 @@ def register(request):
         return redirect(to="/plans")
 
     if request.method == "GET":
-        return render(request, template_name="register.html.tmpl")
+        return render(request, template_name="register.html.tmpl", context={"dev_mode": DEV_MODE})
     elif request.method == "POST":
         username = request.POST["username"]
         email = request.POST["email"]
