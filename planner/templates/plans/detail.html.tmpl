@@ -1,7 +1,8 @@
 {% extends "base.html.tmpl" %}
 
-{% block title %}{{ title }}{% endblock %}
+{% block title %}{{ plan.title }}{% endblock %}
 
 {% block content %}
-  <h1>{{ title }}</h1>
+  <h1>{{ plan.title }}</h1>
+  <p>{{ plan.content|linebreaks }}</p>
 {% endblock %}

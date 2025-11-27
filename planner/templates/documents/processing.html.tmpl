@@ -1,0 +1,9 @@
+{% extends "base.html.tmpl" %}
+
+{% block title %}Ingesting Document{% endblock %}
+
+{% block content %}
+  <h1>Document Uploaded</h1>
+  <p>It may take a few minutes to complete processing.</p>
+  <a href="{% url 'document_new' %}">Upload Another</a>
+{% endblock %}

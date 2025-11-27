@@ -1,0 +1,15 @@
+{% extends "base.html.tmpl" %}
+
+{% block title %}New Trip{% endblock %}
+
+{% block content %}
+  <h1>Where Would You Like To Go?</h1>
+  <form method="post">
+    {% csrf_token %}
+    <fieldset>
+      <label for="prompt">Prompt</label>
+      <textarea name="prompt" required autocomplete="off"></textarea>
+    </fieldset>
+    <input type="submit" value="Submit">
+  </form>
+{% endblock %}

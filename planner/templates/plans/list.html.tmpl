@@ -3,5 +3,11 @@
 {% block title %}Plans{% endblock %}
 
 {% block content %}
-  <ul>TODO</ul>
+  <ul>
+    {% for plan in plans %}
+      <li>
+        <a href="{% url 'plan_detail' plan.id %}">{{ plan.title }}</a>
+      </li>
+    {% endfor %}
+  </ul>
 {% endblock %}

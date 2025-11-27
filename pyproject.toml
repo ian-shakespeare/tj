@@ -5,8 +5,15 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "amadeus>=12.0.0",
+    "argparse>=1.4.0",
     "django>=5.2.8",
+    "langchain>=1.1.0",
+    "langchain-ollama>=1.0.0",
+    "pdfplumber>=0.11.8",
+    "pgvector>=0.4.1",
     "psycopg>=3.2.13",
     "psycopg-binary>=3.2.13",
     "python-dotenv>=1.2.1",
+    "sentence-transformers>=5.1.2",
 ]
