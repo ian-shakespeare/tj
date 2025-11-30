@@ -9,6 +9,9 @@ run:
 migrate:
 	$(PYTHON) manage.py migrate
 
+superuser:
+	$(PYTHON) manage.py createsuperuser
+
 up:
 	$(DOCKER) compose up -d
 

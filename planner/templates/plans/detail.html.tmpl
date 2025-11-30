@@ -1,0 +1,25 @@
+{% extends "base.html.tmpl" %}
+
+{% load tags %}
+
+{% block title %}{{ plan.title }}{% endblock %}
+
+{% block content %}
+  <h1 class="pb-8 text-2xl font-semibold">{{ plan.title }}</h1>
+  <div class="grid gap-4 markdown-content">
+    {{ plan.content|markdownify|safe }}
+  </div>
+  <style>
+  .markdown-content thead {
+    border-bottom: 1px solid oklch(37.3% 0.034 259.733);
+  }
+
+  .markdown-content tr:nth-child(2n) {
+    background: oklch(92.8% 0.006 264.531);
+  }
+
+  .markdown-content hr {
+    border: 0;
+  }
+  </style>
+{% endblock %}

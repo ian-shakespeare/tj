@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{% endblock %} - Travel Japan</title>
+  {% if dev_mode %}
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  {% endif %}
+</head>
+  <body class="grid min-h-screen grid-rows-[auto_1fr_auto] bg-gray-100">
+    <nav class="flex relative bg-red-400 py-6 sticky top-0 justify-center text-xl text-red-950 font-bold shadow">
+      {% if user.is_authenticated %}
+        <ul class="flex center">
+          <li class="px-6">
+            <a href="{% url 'plan_new' %}" class="hover:underline">New Trip</a>
+          </li>
+          <li class="px-6 border-l-1 border-red-900">
+            <a href="{% url 'plan_list' %}" class="hover:underline">Your Trips</a>
+          </li>
+        </ul>
+      {% endif %}
+      {% if user.is_authenticated %}
+        <a href="{% url 'sign_out' %}" class="block absolute right-0 px-6 hover:underline">Sign Out</a>
+      {% else %}
+        <a href="{% url 'index' %}" class="block px-6 justify-self-end hover:underline">Sign In</a>
+      {% endif %}
+    </nav>
+    <main class="container mx-auto p-6 bg-white shadow">
+      {% block content %}
+      {% endblock %}
+    </main>
+    <footer class="grid bg-gray-200 py-4 justify-center">
+      <ul class="flex center">
+        <li class="px-6 text-gray-500 hover:text-gray-700 hover:underline">
+          <a href="https://github.com/ian-shakespeare/tj">GitHub</a>
+        </li>
+        <li class="px-6 text-gray-500 hover:text-gray-700 hover:underline border-l-1 border-gray-400">
+          <a href="https://github.com/ian-shakespeare/tj/blob/main/LICENSE">License</a>
+        </li>
+      </ul>
+    </footer>
+  </body>
+</html>

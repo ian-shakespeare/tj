@@ -1,10 +1,23 @@
-<form method="post">
-  {% csrf_token %}
-  <fieldset>
-    <label for="username">Username</label>
-    <input type="text" name="username" required>
-    <label for="password">Password</label>
-    <input type="password" name="password" required>
-  </fieldset>
-  <input type="submit" value="Submit">
-</form>
+{% extends "base.html.tmpl" %}
+
+{% block title %}Sign In{% endblock %}
+
+{% block content %}
+  <div class="max-w-96 mx-auto grid gap-6">
+    <form method="post" class="grid gap-6">
+      {% csrf_token %}
+      <fieldset class="grid gap-4">
+        <div class="grid">
+          <label for="username">Username</label>
+          <input type="text" name="username" required class="border border-gray-400 rounded p-2 shadow">
+        </div>
+        <div class="grid">
+          <label for="password">Password</label>
+          <input type="password" name="password" required class="border border-gray-400 rounded p-2 shadow">
+        </div>
+      </fieldset>
+      <input type="submit" value="Submit" class="bg-gray-200 rounded text-gray-600 py-3 px-6 text-left cursor-pointer shadow hover:bg-gray-300 hover:text-gray-700">
+    </form>
+    <p>Don't have an account? <a href="{% url 'register' %}" class="text-red-500 underline">Register here.</a></p>
+  </div>
+{% endblock %}
