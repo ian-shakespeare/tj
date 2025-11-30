@@ -3,13 +3,13 @@
 {% block title %}New Trip{% endblock %}
 
 {% block content %}
-  <h1>Where Would You Like To Go?</h1>
-  <form method="post">
+  <form method="post" class="grid gap-6">
     {% csrf_token %}
-    <fieldset>
-      <label for="prompt">Prompt</label>
-      <textarea name="prompt" required autocomplete="off"></textarea>
+    <fieldset class="grid gap-4">
+      <label for="prompt" class="text-2xl justify-self-center">Where Would You Like To Go?</label>
+      <textarea name="prompt" required rows="6" autocomplete="off" class="border border-gray-400 rounded p-6 text-xl shadow-lg"></textarea>
     </fieldset>
-    <input type="submit" value="Submit">
+    <input type="submit" value="Submit" class="bg-gray-200 rounded text-xl text-gray-600 py-3 px-6 text-left cursor-pointer shadow hover:bg-gray-300 hover:text-gray-700">
   </form>
+  <p>For best results, include the dates of your desired trip and the cities you'd like to visit.</p>
 {% endblock %}

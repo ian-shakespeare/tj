@@ -2,7 +2,7 @@ import random
 
 from dataclasses import dataclass
 from datetime import date
-from typing import Optional
+from typing import Any, Optional
 
 
 MOCK_AIR_LINES = [
@@ -47,6 +47,15 @@ class FlightOffer:
     travel_class: str
     non_stop: bool
 
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "airline": self.airline,
+            "price_per_person": self.price_per_person,
+            "total": self.total,
+            "travel_class": self.travel_class,
+            "non_stop": self.non_stop,
+        }
+
 
 def mock_find_flights(
     origin: str,
@@ -69,7 +78,7 @@ def mock_find_flights(
     """
 
     airlines = random.sample(
-        MOCK_HOTEL_NAMES, random.randint(1, 5))
+        MOCK_AIR_LINES, random.randint(1, 5))
 
     flights = []
     for airline in airlines:
@@ -92,15 +101,23 @@ class HotelOffer:
     name: str
     price_per_night: float
     total: float
-    city_code: str
+    city: str
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "price_per_night": self.price_per_night,
+            "total": self.total,
+            "city": self.city,
+        }
 
 
-def mock_list_hotels(city_code: str, check_in: date, check_out: date, adults: int, max_price: float) -> list[HotelOffer]:
+def mock_find_hotels(city: str, check_in: date, check_out: date, adults: int, max_price: float) -> list[HotelOffer]:
     """
     Mock implementation of find_hotels function.
 
     Args:
-        hotel_ids: List of hotel IDs
+        city: Name of the city
         check_in: Check-in date
         check_out: Check-out date
         adults: Number of adults
@@ -122,6 +139,6 @@ def mock_list_hotels(city_code: str, check_in: date, check_out: date, adults: in
         total = round(price_per_night * num_nights * 1.2, 2)
         if total > max_price:
             continue
-        hotels.append(HotelOffer(name, price_per_night, total, city_code))
+        hotels.append(HotelOffer(name, price_per_night, total, city))
 
     return hotels

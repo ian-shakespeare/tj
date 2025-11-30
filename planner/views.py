@@ -91,13 +91,14 @@ def plan_processing(request):
 
 @login_required(login_url="/")
 def plan_list(request):
-    plans = Plan.objects.order_by("-created_at")  # type:ignore
+    plans = Plan.objects.order_by(
+        "-created_at").filter(user=request.user)  # type:ignore
     return render(request, "plans/list.html.tmpl", {"dev_mode": DEV_MODE, "plans": plans})
 
 
 @login_required(login_url="/")
 def plan_detail(request, plan_id):
-    plan = Plan.objects.get(pk=plan_id)  # type:ignore
+    plan = Plan.objects.get(pk=plan_id, user=request.user)  # type:ignore
     if plan is None:
         return HttpResponseNotFound(b"Plan not found")
     return render(request, "plans/detail.html.tmpl", {"dev_mode": DEV_MODE, "plan": plan})

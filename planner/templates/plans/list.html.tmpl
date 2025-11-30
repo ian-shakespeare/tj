@@ -1,13 +1,28 @@
 {% extends "base.html.tmpl" %}
 
+{% load tags %}
+
 {% block title %}Plans{% endblock %}
 
 {% block content %}
-  <ul>
-    {% for plan in plans %}
-      <li>
-        <a href="{% url 'plan_detail' plan.id %}">{{ plan.title }}</a>
-      </li>
-    {% endfor %}
-  </ul>
+  {% if plans %}
+    <ul>
+      {% for plan in plans %}
+        <li class="border-t border-gray-400 first:border-t-0">
+          <section>
+            <a href="{% url 'plan_detail' plan.id %}" class="group grid gap-2 py-8 cursor-pointer first:rounded-t last:rounded-b hover:bg-gray-100">
+              <h2 class="text-2xl group-hover:text-red-500 group-hover:underline">{{ plan.title }}</h2>
+              <p>{{ plan.content|markdownify|textify|truncatewords:60 }}</p>
+              <p class="text-gray-500">{{ plan.created_at|date:"M d, Y" }}</p>
+            </a>
+          </section>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="grid gap-2">
+      <h1 class="text-2xl">No Existing Plans</h1>
+      <p>No problem, let's <a href="{% url 'plan_new' %}" class="text-red-500 underline cursor-pointer">create a new one</a>!</p>
+    </div>
+  {% endif %}
 {% endblock %}
