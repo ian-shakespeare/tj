@@ -111,6 +111,9 @@ class GraphMap:
         Find the cheapest path between two cities using Dijkstra's algorithm.
         The cost is determined by the Transportation enum value (1 for PUBLIC, 2 for SHINKANSEN, 10 for FLIGHT).
         """
+        start_city = start_city.lower()
+        end_city = end_city.lower()
+
         # Check if cities exist
         if start_city not in CITIES or end_city not in CITIES:
             return []
@@ -171,6 +174,9 @@ class GraphMap:
         """
         Find the most convenient path (least number of edges) between two cities using BFS.
         """
+        start_city = start_city.lower()
+        end_city = end_city.lower()
+
         # Check if cities exist
         if start_city not in CITIES or end_city not in CITIES:
             return []
