@@ -1,491 +1,150 @@
-# Multi-Agent Vacation Planning System - Tool Implementation Plan
+### TJ - Multi-Agent Japan Vacation Planning System
 
-## Overview
-This document outlines the implementation plan for four essential tools that will power our multi-agent travel planning system. These tools will provide real-time data from external APIs to help plan comprehensive vacation itineraries.
+#### Overview
 
-## Architecture Context
-- **Framework**: LangChain with Ollama (qwen3:8b model)
-- **Database**: PostgreSQL with pgvector for semantic search
-- **Existing Agents**:
-  - Pathfinder: Builds city-to-city itineraries
-  - Explorer: Finds points of interest
-  - Booker: Searches hotels and flights
-  - Budgeteer: Estimates costs
-  - Receptionist: Orchestrates all agents
+This document outlines the implementation plan for the tools and architecture powering our multi-agent travel planning system. These tools, drawing on external APIs, are intended to help plan comprehensive vacation itineraries.
 
-## Tool Specifications
+#### Architecture Context
 
-### 1. City Finder Tool
-**Purpose**: Find all cities between two points (origin and destination cities)
+The system architecture utilizes a Multi-Agent System (MAS) approach, employing specialized agents for different stages of trip planning.
 
-**API**: Google Routes API + Places API
-- **Routes API Endpoint**: `https://routes.googleapis.com/directions/v2:computeRoutes`
-- **Places API Endpoint**: `https://places.googleapis.com/v1/places:searchNearby`
+*   **Framework** : LangChain with Ollama (`gpt-oss:20b` model).
+*   **Web Application Stack**: The web application stack uses **Django** with its built-in **authentication/authorization** features.
+*   **Database** : PostgreSQL with pgvector for semantic search.
+*   **Agents**:
+    *   **Pathfinder**: Builds city-to-city itineraries.
+    *   **Explorer**: Finds points of interest.
+    *   **Booker**: Searches hotels and flights.
+    *   **Budgeteer**: Estimates costs.
+    *   **Receptionist**: Orchestrates all agents.
 
-**Implementation Details**:
-- **Input Parameters**:
-  - `origin_city: str` - Starting city name
-  - `destination_city: str` - Ending city name
-  - `max_detour_minutes: int = 120` - Maximum acceptable detour (optional)
+***
 
-- **Process Flow**:
-  1. Geocode both origin and destination cities using Places API Text Search
-  2. Use Routes API to compute the optimal route between cities
-  3. Extract waypoints or intermediate cities along the route
-  4. For the route polyline, sample points every N kilometers (e.g., every 50km)
-  5. Use Places API Nearby Search to find cities/localities near those points
-  6. Filter results to include only administrative areas (type: "locality" or "administrative_area_level_3")
-  7. Return list of cities with coordinates, distance from origin, and estimated travel time
+### Project Checkpoint Summary
 
-- **Output Format**:
-  ```python
-  {
-    "origin": {"name": str, "lat": float, "lng": float},
-    "destination": {"name": str, "lat": float, "lng": float},
-    "intermediate_cities": [
-      {
-        "name": str,
-        "lat": float,
-        "lng": float,
-        "distance_from_origin_km": float,
-        "estimated_travel_time_minutes": int
-      }
-    ],
-    "total_distance_km": float,
-    "total_duration_minutes": int
-  }
-  ```
+This section details the critical architectural decisions, operational insights, and issues encountered during the recent development sprint.
 
-- **API Authentication**: Requires Google Cloud API key with Routes API and Places API enabled
+#### 1. Technologies and Model Selection
 
-- **Rate Limits**: 
-  - Routes API: Check Google Cloud quotas (typically generous for development)
-  - Places API: Up to 1000 requests/day (free tier)
+The core reasoning engine uses **GPT OSS models** instead of the originally planned Qwen3 models. This decision was driven by the observation that the **Qwen3:8b model exhibited a tendency to perform reasoning even when that capability was intended to be disabled**. For the web interface, the system uses **Django, leveraging its built-in authentication and authorization mechanisms**.
 
-- **Error Handling**:
-  - Handle invalid city names with graceful fallback
-  - Validate API responses
-  - Implement retry logic for transient failures
+#### 2. Interesting Insights (Multi-Agent Delegation)
 
-### 2. Points of Interest Finder Tool
-**Purpose**: Find notable locations and attractions in a specified city
+The project leverages a multi-agent architecture where task distribution and collaboration are key. Performance comparisons revealed a direct relationship between model size and delegation strategy:
 
-**API**: Google Places API (New)
-- **Endpoint**: `https://places.googleapis.com/v1/places:searchText`
-- **Details Endpoint**: `https://places.googleapis.com/v1/places/{place_id}`
+*   I found that **larger models generally performed worse than smaller/medium sized ones**.
+*   Larger models tended to prioritize solving the entire problem internally without consulting sub agents.
+*   Conversely, **smaller models more eagerly delegated work to specialists** (the defined sub-agents), aligning with the MAS principle of distributing tasks among agents to solve complex, multi-step challenges.
 
-**Implementation Details**:
-- **Input Parameters**:
-  - `city: str` - City name
-  - `categories: list[str] = None` - Optional filter (e.g., ["tourist_attraction", "museum", "restaurant"])
-  - `min_rating: float = 4.0` - Minimum rating threshold
-  - `max_results: int = 20` - Maximum number of results
-  
-- **Process Flow**:
-  1. Geocode the city using Places API Text Search
-  2. Define search radius (e.g., 5km for small cities, 15km for large cities)
-  3. Query Places API for each category:
-     - tourist_attraction
-     - museum
-     - park
-     - restaurant (highly rated)
-     - shopping_mall
-     - night_club (if applicable)
-  4. For each result, fetch detailed information including:
-     - Name, address, location
-     - Rating and number of reviews
-     - Price level
-     - Opening hours
-     - Photos (up to 3 reference URLs)
-  5. Sort by rating and review count
-  6. Return top N results per category
+#### 3. Issues Encountered (API Integration)
 
-- **Output Format**:
-  ```python
-  {
-    "city": str,
-    "location": {"lat": float, "lng": float},
-    "points_of_interest": [
-      {
-        "name": str,
-        "place_id": str,
-        "category": str,
-        "address": str,
-        "location": {"lat": float, "lng": float},
-        "rating": float,
-        "user_ratings_total": int,
-        "price_level": int,  # 0-4 scale
-        "opening_hours": {
-          "open_now": bool,
-          "weekday_text": list[str]
-        },
-        "photos": list[str],  # Photo reference URLs
-        "description": str  # Editorial summary if available
-      }
-    ]
-  }
-  ```
+The primary development issues centered on integrating the real-time travel APIs, specifically the **Hotel Finder Tool** and the **Flight Finder Tool**.
 
-- **API Authentication**: Same Google Cloud API key as City Finder
+*   I ran into many issues with the hotels and flight API because **the format is very particular**.
+*   The LLM agents were **mostly unsuccessful in calling the flight/hotel tools** due to the specific format requirements. Agents rely on defined tool schemas and procedural memory to execute actions.
+*   After stabilizing the tool calls, I **hit the API rate limit** (which is a known limitation of the Amadeus test environment specified in the original plan's Phase 4: Testing & Refinement).
+*   To proceed and enable a demo, I decided to **mock the hotel and flight functionality**. While this is not ideal for a production system, it allows for a demonstration and leaves the option open for future users who wish to pay for an API extension.
 
-- **Rate Limits**: 
-  - Text Search: Consider cost per request
-  - Details requests: May require additional quota
+***
 
-- **Error Handling**:
-  - Handle missing data fields gracefully
-  - Validate city exists
-  - Filter out permanently closed places
+### Tool Specifications
 
-### 3. Hotel Finder Tool
-**Purpose**: Search for available hotels in a city for specific dates
+This section details the initial design specifications for the four primary tools, noting that the Hotel Finder and Flight Finder are currently operating in a mocked state.
 
-**API**: Amadeus Hotel Search API
-- **Endpoints**:
-  - Hotel List: `https://test.api.amadeus.com/v1/reference-data/locations/hotels/by-city`
-  - Hotel Search: `https://test.api.amadeus.com/v3/shopping/hotel-offers`
+#### 1. City Finder Tool
 
-**Implementation Details**:
-- **Input Parameters**:
-  - `city_code: str` - IATA city code (e.g., "NYC", "LON")
-  - `check_in: str` - Check-in date (YYYY-MM-DD format)
-  - `check_out: str` - Check-out date (YYYY-MM-DD format)
-  - `adults: int = 2` - Number of adults
-  - `max_price: float = None` - Maximum price per night (optional)
-  - `currency: str = "USD"` - Currency code
-  - `max_results: int = 10` - Maximum number of results
-  
-- **Process Flow**:
-  1. If city name is provided instead of code, convert to IATA code using Amadeus location API
-  2. Query Hotel List endpoint to get hotels in the city
-  3. Use Hotel Search endpoint with:
-     - Hotel IDs from step 2
-     - Check-in/check-out dates
-     - Number of guests
-  4. Parse availability and pricing information
-  5. Sort by price or rating
-  6. Return top N results
+*   **Purpose** : Find all cities between two points (origin and destination cities).
+*   **API** : Google Routes API + Places API.
+*   **Process Flow** : Geocode cities, compute optimal route, extract waypoints, sample points along the route, use Places API Nearby Search, and filter results.
+*   **Rate Limits** : Places API allows up to 1000 requests/day (free tier).
 
-- **Output Format**:
-  ```python
-  {
-    "city": str,
-    "city_code": str,
-    "check_in": str,
-    "check_out": str,
-    "hotels": [
-      {
-        "hotel_id": str,
-        "name": str,
-        "rating": float,
-        "location": {
-          "latitude": float,
-          "longitude": float,
-          "address": str
-        },
-        "offers": [
-          {
-            "id": str,
-            "room_type": str,
-            "guests": int,
-            "price": {
-              "total": float,
-              "currency": str,
-              "per_night": float
-            },
-            "cancellation_policy": str,
-            "amenities": list[str],
-            "bed_type": str
-          }
-        ]
-      }
-    ]
-  }
-  ```
+#### 2. Points of Interest Finder Tool
 
-- **API Authentication**: 
-  - Requires Amadeus API key and secret
-  - OAuth 2.0 token-based authentication
-  - Token expires after ~30 minutes, implement refresh logic
+*   **Purpose** : Find notable locations and attractions in a specified city.
+*   **API** : Google Places API (New).
+*   **Process Flow** : Geocode the city, define a search radius, query Places API for categories (e.g., tourist_attraction, museum), fetch details, and return top results.
+*   **Input Parameters** : city, categories (optional filter), min_rating (default 4.0), max_results (default 20).
 
-- **Rate Limits**: 
-  - Test environment: Limited requests per second
-  - Production: Check Amadeus pricing tier
+#### 3. Hotel Finder Tool (Currently Mocked)
 
-- **Error Handling**:
-  - Handle no availability scenarios
-  - Validate date formats and ranges
-  - Handle invalid city codes
-  - Cache authentication tokens
+*   **Purpose** : Search for available hotels in a city for specific dates.
+*   **API (Planned)** : Amadeus Hotel Search API.
+*   **Endpoints (Planned)** : Hotel List (`/v1/reference-data/locations/hotels/by-city`) and Hotel Search (`/v3/shopping/hotel-offers`).
+*   **Implementation Note**: The implementation of this tool caused issues due to the API's **particular format** and subsequent rate limiting; functionality is currently **mocked**.
 
-### 4. Flight Finder Tool
-**Purpose**: Search for flights between cities for specific dates
+#### 4. Flight Finder Tool (Currently Mocked)
 
-**API**: Amadeus Flight Offers Search API
-- **Endpoint**: `https://test.api.amadeus.com/v2/shopping/flight-offers`
+*   **Purpose** : Search for flights between cities for specific dates.
+*   **API (Planned)** : Amadeus Flight Offers Search API.
+*   **Endpoint (Planned)** : `/v2/shopping/flight-offers`.
+*   **Implementation Note**: The implementation of this tool caused issues due to the API's **particular format** and subsequent rate limiting; functionality is currently **mocked**.
 
-**Implementation Details**:
-- **Input Parameters**:
-  - `origin: str` - Origin airport/city code (IATA)
-  - `destination: str` - Destination airport/city code (IATA)
-  - `departure_date: str` - Departure date (YYYY-MM-DD)
-  - `return_date: str = None` - Return date for round trip (optional)
-  - `adults: int = 1` - Number of adult passengers
-  - `travel_class: str = "ECONOMY"` - Cabin class (ECONOMY, PREMIUM_ECONOMY, BUSINESS, FIRST)
-  - `non_stop: bool = False` - Direct flights only
-  - `max_results: int = 10` - Maximum number of results
-  - `max_price: float = None` - Maximum price (optional)
-  - `currency: str = "USD"` - Currency code
-  
-- **Process Flow**:
-  1. Convert city names to IATA airport codes if needed
-  2. Validate date formats and ensure departure is before return
-  3. Query Flight Offers Search endpoint with parameters
-  4. Parse response for:
-     - Flight segments (outbound/return)
-     - Airline information
-     - Duration and layovers
-     - Pricing
-  5. Sort by price, duration, or relevance
-  6. Return top N results
+### Implementation Structure
 
-- **Output Format**:
-  ```python
-  {
-    "origin": str,
-    "destination": str,
-    "departure_date": str,
-    "return_date": str,
-    "flights": [
-      {
-        "id": str,
-        "type": str,  # "one-way" or "round-trip"
-        "price": {
-          "total": float,
-          "currency": str,
-          "per_person": float
-        },
-        "outbound": {
-          "segments": [
-            {
-              "departure": {
-                "airport": str,
-                "terminal": str,
-                "time": str  # ISO 8601
-              },
-              "arrival": {
-                "airport": str,
-                "terminal": str,
-                "time": str
-              },
-              "carrier": str,
-              "flight_number": str,
-              "aircraft": str,
-              "duration": str,  # ISO 8601 duration
-              "cabin_class": str
-            }
-          ],
-          "total_duration": str
-        },
-        "return": {  # Same structure as outbound, null if one-way
-          "segments": [...],
-          "total_duration": str
-        },
-        "number_of_stops": int,
-        "booking_class": str,
-        "seats_available": int
-      }
-    ]
-  }
-  ```
+#### Shared Components
+*   **Google API Client**: Centralized authentication and request handling; includes methods for `geocode_city`, `search_places`, `get_place_details`, and `compute_route`.
+*   **Amadeus API Client**: Designed for OAuth token management with auto-refresh; includes methods for `get_access_token`, `search_hotels`, `search_flights`, and `get_airport_code`.
 
-- **API Authentication**: Same as Hotel Finder (Amadeus OAuth 2.0)
+#### Integration with Existing Agents
+*   **Pathfinder Agent**: Uses `city_finder` tool to discover intermediate cities.
+*   **Explorer Agent**: Uses `poi_finder` tool to discover attractions.
+*   **Booker Agent**: Was planned to use `hotel_finder` and `flight_finder` for accommodation and transportation between cities.
 
-- **Rate Limits**: 
-  - Test environment: Limited requests
-  - Monitor quota usage
+### Testing Strategy
 
-- **Error Handling**:
-  - Handle no flights found
-  - Validate airport codes
-  - Handle date validation errors
-  - Parse and display API error messages clearly
+Testing includes three levels: Unit Tests, Integration Tests, and End-to-End Tests.
 
-## Implementation Structure
+*   **Unit Tests**: Test API clients with mocked responses, input validation, and error handling scenarios.
+*   **Integration Tests**: Planned to test actual API calls with test credentials and verify response parsing; also included checking rate limiting and retry logic. (Note: Current integration testing for Amadeus APIs is limited due to the mocking of Hotel and Flight Finders).
+*   **End-to-End Tests**: Test full agent workflow, verifying agents access and use tools correctly, using sample queries like "Plan a 7-day trip from Tokyo to Osaka between June 1-7, 2025".
 
-### Recommended File Organization
-```
-lib/
-├── __init__.py
-├── pgvector.py (existing)
-├── tools/
-│   ├── __init__.py
-│   ├── city_finder.py
-│   ├── poi_finder.py
-│   ├── hotel_finder.py
-│   ├── flight_finder.py
-│   └── api_clients/
-│       ├── __init__.py
-│       ├── google_api.py
-│       └── amadeus_api.py
-```
+### Development Phases (Original Plan)
 
-### Shared Components
+*   **Phase 1: API Client Setup (2-3 days)**: Set up accounts, implement base client classes, and test authentication.
+*   **Phase 2: Core Tool Implementation (3-4 days)**: Implement the four core tools (City, POI, Hotel, Flight Finder) and write unit tests.
+*   **Phase 3: LangChain Integration (2 days)**: Wrap tools, add them to agents, and update system prompts.
+*   **Phase 4: Testing & Refinement (2-3 days)**: Integration testing with real APIs, E2E testing, error handling, and optimization. (Note: This phase encountered the API rate limiting issue, leading to the mocking of travel functionality).
+*   **Phase 5: Documentation (1 day)**: Document API setup, usage examples, rate limits, costs, and troubleshooting.
 
-#### Google API Client (`lib/tools/api_clients/google_api.py`)
-- Centralized authentication and request handling
-- Shared methods:
-  - `geocode_city(city_name: str) -> dict`
-  - `search_places(query: str, location: dict, radius: int) -> list`
-  - `get_place_details(place_id: str) -> dict`
-  - `compute_route(origin: dict, destination: dict) -> dict`
+### Cost Considerations
 
-#### Amadeus API Client (`lib/tools/api_clients/amadeus_api.py`)
-- OAuth token management with auto-refresh
-- Shared methods:
-  - `get_access_token() -> str`
-  - `refresh_token() -> str`
-  - `search_hotels(params: dict) -> dict`
-  - `search_flights(params: dict) -> dict`
-  - `get_airport_code(city_name: str) -> str`
+Development costs primarily stem from API usage.
 
-### Environment Variables
-Add to `.env` file:
-```bash
-# Google Cloud Platform
-GOOGLE_API_KEY=your_google_api_key
+*   **Google APIs**: Places API costs ~$17 per 1000 Text Search requests, and Routes API costs ~$5 per 1000 route requests, offset by a $200 monthly credit.
+*   **Amadeus APIs**: The test environment is free but limited. Production uses pay-per-use pricing, estimated at ~$0.50–2.00 per complete trip query.
+*   **Recommendations**: Implement caching, use test environments, set up budget alerts, and consider request batching.
 
-# Amadeus API (Test Environment)
-AMADEUS_API_KEY=your_amadeus_api_key
-AMADEUS_API_SECRET=your_amadeus_api_secret
-AMADEUS_API_BASE_URL=https://test.api.amadeus.com
+### Future Enhancements
 
-# PostgreSQL (existing)
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
-POSTGRES_DB=japan-travel-agent
-```
+Potential future work includes:
+1.  Adding a caching layer (Redis) for frequently searched cities/hotels.
+2.  Implementing async API calls for improved performance.
+3.  Adding support for alternative APIs (e.g., Skyscanner, Booking.com).
+4.  Creating route visualization on maps.
+5.  Adding real-time price tracking and alerts.
+6.  Implementing user preferences and personalization.
+7.  Adding support for multi-city trips (beyond point-to-point travel).
+8.  Integrating weather data for destination planning.
 
-### Dependencies to Add
-Update `pyproject.toml`:
-```toml
-dependencies = [
-    # ... existing dependencies ...
-    "requests>=2.32.0",
-    "python-dotenv>=1.0.0",
-    "pydantic>=2.10.0",  # For data validation
-    "httpx>=0.28.0",  # For async API calls (future enhancement)
-]
-```
+### Security Considerations
 
-## Integration with Existing Agents
+Security requires rigorous adherence to best practices, especially concerning tool usage which represents arbitrary code execution paths.
 
-### Pathfinder Agent
-- Add `city_finder` tool to discover intermediate cities
-- Usage: Find cities between start and end points to build itinerary
+*   Credentials **MUST NOT** be committed to version control; environment variables **MUST** be used.
+*   Implement API key rotation and request logging (sanitizing sensitive data).
+*   User input **MUST** be validated and sanitized.
+*   Rate limiting **MUST** be implemented on user-facing endpoints.
+*   All API communications **SHOULD** use HTTPS.
+*   Hosts **MUST** obtain explicit user consent before invoking any tool, as tools represent arbitrary code execution.
 
-### Explorer Agent  
-- Add `poi_finder` tool to discover attractions
-- Usage: For each city in itinerary, find top-rated points of interest
+### Notes
 
-### Booker Agent
-- Add `hotel_finder` tool for accommodation search
-- Add `flight_finder` tool for transportation between cities
-- Usage: Book hotels for each city stay and flights for inter-city travel
+*   All date formats should be ISO 8601 (YYYY-MM-DD).
+*   All prices should include currency code.
+*   Consider time zones and handle multi-airport cities (e.g., NYC).
 
-## Testing Strategy
+***
 
-### Unit Tests
-1. Test each API client independently with mocked responses
-2. Test input validation for all tools
-3. Test error handling scenarios
+**Analogy for LLM Delegation Insight:**
 
-### Integration Tests
-1. Test actual API calls with test credentials
-2. Verify response parsing and data transformation
-3. Test rate limiting and retry logic
-
-### End-to-End Tests
-1. Test full agent workflow with all tools
-2. Sample query: "Plan a 7-day trip from Tokyo to Osaka between June 1-7, 2025"
-3. Verify all agents can access and use tools correctly
-
-## Development Phases
-
-### Phase 1: API Client Setup (2-3 days)
-- [ ] Set up Google Cloud project and enable APIs
-- [ ] Set up Amadeus test account
-- [ ] Implement base API client classes
-- [ ] Test authentication and basic requests
-
-### Phase 2: Core Tool Implementation (3-4 days)
-- [ ] Implement City Finder tool
-- [ ] Implement POI Finder tool
-- [ ] Implement Hotel Finder tool
-- [ ] Implement Flight Finder tool
-- [ ] Write unit tests for each tool
-
-### Phase 3: LangChain Integration (2 days)
-- [ ] Wrap tools as LangChain @tool decorators
-- [ ] Add tools to appropriate agents
-- [ ] Update agent system prompts if needed
-- [ ] Test tool calling from agents
-
-### Phase 4: Testing & Refinement (2-3 days)
-- [ ] Integration testing with real APIs
-- [ ] End-to-end agent workflow testing
-- [ ] Handle edge cases and errors
-- [ ] Optimize API usage to reduce costs
-- [ ] Add caching where appropriate
-
-### Phase 5: Documentation (1 day)
-- [ ] Document API setup instructions
-- [ ] Create usage examples
-- [ ] Document rate limits and costs
-- [ ] Create troubleshooting guide
-
-## Cost Considerations
-
-### Google APIs
-- **Places API**: $17 per 1000 Text Search requests
-- **Routes API**: $5 per 1000 route requests
-- **Free tier**: $200 monthly credit
-
-### Amadeus APIs
-- **Test environment**: Free but limited
-- **Production**: Pay-per-use pricing
-- Estimated cost: ~$0.50-2.00 per complete trip query
-
-### Recommendations
-1. Implement caching for repeated queries (especially city geocoding)
-2. Use test environments during development
-3. Set up budget alerts in Google Cloud Console
-4. Consider implementing request batching where possible
-
-## Future Enhancements
-1. Add caching layer (Redis) for frequently searched cities/hotels
-2. Implement async API calls for better performance
-3. Add support for alternative APIs (Skyscanner, Booking.com)
-4. Create visualization of routes on maps
-5. Add real-time price tracking and alerts
-6. Implement user preferences and personalization
-7. Add support for multi-city trips (not just point-to-point)
-8. Integrate weather data for destination planning
-
-## Security Considerations
-1. Never commit API keys to version control
-2. Use environment variables for all credentials
-3. Implement API key rotation policy
-4. Add request logging for debugging (but sanitize sensitive data)
-5. Validate and sanitize all user inputs
-6. Implement rate limiting on user-facing endpoints
-7. Use HTTPS for all API communications
-
-## Notes
-- All date formats should be ISO 8601 (YYYY-MM-DD)
-- All prices should include currency code
-- All coordinates should be in decimal degrees
-- Consider time zones when handling flight times
-- Handle multi-airport cities (e.g., NYC has JFK, LGA, EWR)
+The observed difference between larger and smaller models is similar to hiring a company CEO versus a team manager. The **larger model (CEO)** tends to believe it can handle all major tasks internally, relying on its vast general knowledge to synthesize a full solution without detailed consultation. The **smaller model (Team Manager)**, knowing its own scope and limitations, is more inclined to follow the established workflow—eagerly delegating specific, complex tasks (like booking flights or finding obscure hotels) to its predefined **specialists (sub-agents/tools)**, thereby ensuring the distributed workload achieves the collective goal effectively.
